@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة التحكم — Remlex</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="admin-page">
+
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- ── شاشة تسجيل الدخول ── -->
+  <div class="auth-screen" id="auth-screen">
+    <div class="glass-card auth-card">
+      <h2 class="auth-title">تسجيل الدخول</h2>
+      <p class="auth-sub">للوصول إلى لوحة التحكم</p>
+
+      <div class="field-group">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" placeholder="admin@example.com" autocomplete="email" />
+      </div>
+
+      <div class="field-group">
+        <label for="password">كلمة المرور</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <p class="error-msg" id="auth-error" aria-live="polite"></p>
+
+      <button class="btn btn-primary" id="login-btn">دخول</button>
+    </div>
+  </div>
+
+  <!-- ── لوحة التحكم ── -->
+  <div class="dashboard" id="dashboard" hidden>
+
+    <header class="dash-header">
+      <div>
+        <span class="dash-logo">Remlex</span>
+        <span class="dash-label">لوحة التحكم</span>
+      </div>
+      <button class="btn btn-ghost" id="logout-btn">خروج</button>
+    </header>
+
+    <div class="dash-body">
+
+      <!-- ── بيانات الملف الشخصي ── -->
+      <section class="glass-card section-card">
+        <h3 class="section-title">الملف الشخصي</h3>
+        <div class="field-group">
+          <label for="p-name">الاسم</label>
+          <input type="text" id="p-name" placeholder="Remlex" />
+        </div>
+        <div class="field-group">
+          <label for="p-bio">Bio</label>
+          <textarea id="p-bio" rows="3" placeholder="نبذة قصيرة عنك…"></textarea>
+        </div>
+        <div class="field-group">
+          <label for="p-avatar">رابط الصورة الشخصية (اختياري)</label>
+          <input type="url" id="p-avatar" placeholder="https://…" />
+        </div>
+        <button class="btn btn-primary" id="save-profile-btn">حفظ الملف الشخصي</button>
+        <p class="success-msg" id="profile-success" aria-live="polite"></p>
+      </section>
+
+      <!-- ── إضافة رابط جديد ── -->
+      <section class="glass-card section-card">
+        <h3 class="section-title">إضافة رابط جديد</h3>
+        <div class="field-group">
+          <label for="link-title">العنوان</label>
+          <input type="text" id="link-title" placeholder="مثال: قناتي على يوتيوب" />
+        </div>
+        <div class="field-group">
+          <label for="link-url">الرابط</label>
+          <input type="url" id="link-url" placeholder="https://…" />
+        </div>
+        <div class="field-group">
+          <label for="link-icon">أيقونة (emoji أو نص)</label>
+          <input type="text" id="link-icon" placeholder="🔗" maxlength="4" />
+        </div>
+        <button class="btn btn-primary" id="add-link-btn">إضافة الرابط</button>
+        <p class="error-msg" id="link-error" aria-live="polite"></p>
+      </section>
+
+      <!-- ── الروابط الحالية ── -->
+      <section class="glass-card section-card">
+        <h3 class="section-title">الروابط الحالية</h3>
+        <ul class="admin-links-list" id="admin-links-list">
+          <li class="empty-state">جاري التحميل…</li>
+        </ul>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="glass-card modal-card">
+      <h3 class="section-title">تعديل الرابط</h3>
+      <input type="hidden" id="edit-id" />
+      <div class="field-group">
+        <label for="edit-title">العنوان</label>
+        <input type="text" id="edit-title" />
+      </div>
+      <div class="field-group">
+        <label for="edit-url">الرابط</label>
+        <input type="url" id="edit-url" />
+      </div>
+      <div class="field-group">
+        <label for="edit-icon">الأيقونة</label>
+        <input type="text" id="edit-icon" maxlength="4" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="save-edit-btn">حفظ</button>
+        <button class="btn btn-ghost" id="cancel-edit-btn">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

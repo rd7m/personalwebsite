@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remlex — Link in Bio</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="public-page">
+
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <main class="profile-container" id="profile-container">
+
+    <!-- Header Skeleton -->
+    <div class="profile-header">
+      <div class="avatar-wrap skeleton" id="avatar-wrap">
+        <img id="avatar-img" src="" alt="avatar" style="display:none" />
+        <span id="avatar-initials"></span>
+      </div>
+      <h1 class="profile-name skeleton-text" id="profile-name"></h1>
+      <p class="profile-bio skeleton-text" id="profile-bio"></p>
+    </div>
+
+    <!-- Links List -->
+    <ul class="links-list" id="links-list" aria-label="الروابط">
+      <!-- populated by JS -->
+    </ul>
+
+  </main>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    window.__firebaseApp = initializeApp;
+    window.__getFirestore = getFirestore;
+  </script>
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>
