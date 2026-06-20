@@ -1,286 +1,638 @@
 // ════════════════════════════════════════
-//  admin.js — لوحة التحكم (admin.html)
+//  admin.js — Advanced Admin Panel
+//  Auth + Firestore + Storage
 // ════════════════════════════════════════
 
-import { initializeApp }                                from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc,
-         collection, query, orderBy, onSnapshot,
-         addDoc, updateDoc, deleteDoc, serverTimestamp }
-                                                        from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword,
-         onAuthStateChanged, signOut }                  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { firebaseConfig }                               from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-// ── Init ──
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+import { firebaseConfig } from "./firebase-config.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
-// ── DOM refs ──
-const authScreen     = document.getElementById("auth-screen");
-const dashboard      = document.getElementById("dashboard");
+let unsubscribeLinks = null;
+let avatarObjectUrl = "";
 
-// Auth
-const emailInput     = document.getElementById("email");
-const passwordInput  = document.getElementById("password");
-const loginBtn       = document.getElementById("login-btn");
-const logoutBtn      = document.getElementById("logout-btn");
-const authError      = document.getElementById("auth-error");
+const linkMap = new Map();
 
-// Profile
-const pName          = document.getElementById("p-name");
-const pBio           = document.getElementById("p-bio");
-const pAvatar        = document.getElementById("p-avatar");
-const saveProfileBtn = document.getElementById("save-profile-btn");
-const profileSuccess = document.getElementById("profile-success");
+const refs = {
+  authScreen: document.getElementById("auth-screen"),
+  dashboard: document.getElementById("dashboard"),
 
-// Add Link
-const linkTitle      = document.getElementById("link-title");
-const linkUrl        = document.getElementById("link-url");
-const linkIcon       = document.getElementById("link-icon");
-const addLinkBtn     = document.getElementById("add-link-btn");
-const linkError      = document.getElementById("link-error");
+  emailInput: document.getElementById("email"),
+  passwordInput: document.getElementById("password"),
+  loginBtn: document.getElementById("login-btn"),
+  logoutBtn: document.getElementById("logout-btn"),
+  authError: document.getElementById("auth-error"),
 
-// Admin List
-const adminList      = document.getElementById("admin-links-list");
+  pName: document.getElementById("p-name"),
+  pBio: document.getElementById("p-bio"),
+  pAvatar: document.getElementById("p-avatar"),
+  pAvatarFile: document.getElementById("p-avatar-file"),
+  avatarPreview: document.getElementById("avatar-preview"),
+  pAccent: document.getElementById("p-accent"),
+  pBgTop: document.getElementById("p-bg-top"),
+  pBgBottom: document.getElementById("p-bg-bottom"),
+  saveProfileBtn: document.getElementById("save-profile-btn"),
+  profileSuccess: document.getElementById("profile-success"),
+  uploadStatus: document.getElementById("upload-status"),
 
-// Modal
-const modalOverlay   = document.getElementById("modal-overlay");
-const editId         = document.getElementById("edit-id");
-const editTitle      = document.getElementById("edit-title");
-const editUrl        = document.getElementById("edit-url");
-const editIcon       = document.getElementById("edit-icon");
-const saveEditBtn    = document.getElementById("save-edit-btn");
-const cancelEditBtn  = document.getElementById("cancel-edit-btn");
+  linkTitle: document.getElementById("link-title"),
+  linkUrl: document.getElementById("link-url"),
+  linkIcon: document.getElementById("link-icon"),
+  linkNeon: document.getElementById("link-neon"),
+  linkVisible: document.getElementById("link-visible"),
+  addLinkBtn: document.getElementById("add-link-btn"),
+  linkError: document.getElementById("link-error"),
 
-// ══════════════════════════
-//  AUTH
-// ══════════════════════════
+  refreshLinksBtn: document.getElementById("refresh-links-btn"),
+  adminList: document.getElementById("admin-links-list"),
+
+  modalOverlay: document.getElementById("modal-overlay"),
+  editId: document.getElementById("edit-id"),
+  editTitle: document.getElementById("edit-title"),
+  editUrl: document.getElementById("edit-url"),
+  editIcon: document.getElementById("edit-icon"),
+  editNeon: document.getElementById("edit-neon"),
+  editVisible: document.getElementById("edit-visible"),
+  saveEditBtn: document.getElementById("save-edit-btn"),
+  cancelEditBtn: document.getElementById("cancel-edit-btn"),
+  editError: document.getElementById("edit-error")
+};
+
+/* ── Auth ── */
+
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    authScreen.hidden = true;
-    dashboard.hidden  = false;
+    refs.authScreen.hidden = true;
+    refs.dashboard.hidden = false;
+
     loadProfile();
     listenLinks();
   } else {
-    authScreen.hidden = false;
-    dashboard.hidden  = true;
+    refs.authScreen.hidden = true;
+    refs.dashboard.hidden = true;
+
+    unsubscribeLinks?.();
+    unsubscribeLinks = null;
+    refs.adminList.replaceChildren();
   }
 });
 
-loginBtn.addEventListener("click", async () => {
-  authError.textContent = "";
-  const email    = emailInput.value.trim();
-  const password = passwordInput.value;
+refs.loginBtn.addEventListener("click", handleLogin);
+
+[refs.emailInput, refs.passwordInput].forEach((input) => {
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleLogin();
+    }
+  });
+});
+
+refs.logoutBtn.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    alert(`خطأ في الخروج: ${error.message}`);
+  }
+});
+
+async function handleLogin() {
+  if (refs.loginBtn.disabled) return;
+
+  refs.authError.textContent = "";
+
+  const email = refs.emailInput.value.trim();
+  const password = refs.passwordInput.value;
 
   if (!email || !password) {
-    authError.textContent = "يرجى إدخال البريد وكلمة المرور.";
+    refs.authError.textContent = "يرجى إدخال البريد وكلمة المرور.";
     return;
   }
 
-  loginBtn.disabled    = true;
-  loginBtn.textContent = "جاري الدخول…";
+  refs.loginBtn.disabled = true;
+  refs.loginBtn.textContent = "جاري الدخول…";
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    authError.textContent = friendlyAuthError(err.code);
-    loginBtn.disabled    = false;
-    loginBtn.textContent = "دخول";
+  } catch (error) {
+    refs.authError.textContent = friendlyAuthError(error.code);
+  } finally {
+    refs.loginBtn.disabled = false;
+    refs.loginBtn.textContent = "دخول";
   }
-});
-
-logoutBtn.addEventListener("click", () => signOut(auth));
-
-// ── Allow Enter key in auth fields ──
-[emailInput, passwordInput].forEach(el =>
-  el.addEventListener("keydown", e => { if (e.key === "Enter") loginBtn.click(); })
-);
+}
 
 function friendlyAuthError(code) {
   const map = {
-    "auth/invalid-email":          "البريد الإلكتروني غير صحيح.",
-    "auth/user-not-found":         "لا يوجد حساب بهذا البريد.",
-    "auth/wrong-password":         "كلمة المرور غير صحيحة.",
-    "auth/too-many-requests":      "محاولات كثيرة، حاول لاحقاً.",
-    "auth/invalid-credential":     "البريد أو كلمة المرور غير صحيحة.",
+    "auth/invalid-email": "البريد الإلكتروني غير صحيح.",
+    "auth/user-not-found": "لا يوجد حساب بهذا البريد.",
+    "auth/wrong-password": "كلمة المرور غير صحيحة.",
+    "auth/too-many-requests": "محاولات كثيرة، حاول لاحقاً.",
+    "auth/invalid-credential": "البريد أو كلمة المرور غير صحيحة."
   };
+
   return map[code] || "حدث خطأ، حاول مجدداً.";
 }
 
-// ══════════════════════════
-//  PROFILE
-// ══════════════════════════
+/* ── Profile ── */
+
+refs.pAvatar.addEventListener("input", refreshAvatarPreview);
+refs.pAvatarFile.addEventListener("change", refreshAvatarPreview);
+refs.saveProfileBtn.addEventListener("click", saveProfile);
+
 async function loadProfile() {
   try {
     const snap = await getDoc(doc(db, "settings", "profile"));
+
     if (snap.exists()) {
-      const d    = snap.data();
-      pName.value   = d.name      || "";
-      pBio.value    = d.bio       || "";
-      pAvatar.value = d.avatarUrl || "";
+      const d = snap.data();
+
+      refs.pName.value = d.name || "";
+      refs.pBio.value = d.bio || "";
+      refs.pAvatar.value = d.avatarUrl || "";
+      refs.pAccent.value = normalizeHex(d.accentColor) || "#3b82f6";
+      refs.pBgTop.value = normalizeHex(d.bgTop) || "#081120";
+      refs.pBgBottom.value = normalizeHex(d.bgBottom) || "#02040a";
+    } else {
+      refs.pName.value = "Remlex";
+      refs.pBio.value = "";
+      refs.pAvatar.value = "";
+      refs.pAccent.value = "#3b82f6";
+      refs.pBgTop.value = "#081120";
+      refs.pBgBottom.value = "#02040a";
     }
-  } catch (err) {
-    console.error("خطأ في جلب الملف الشخصي:", err);
+
+    refreshAvatarPreview();
+  } catch (error) {
+    console.error("خطأ في جلب الملف الشخصي:", error);
   }
 }
 
-saveProfileBtn.addEventListener("click", async () => {
-  profileSuccess.textContent = "";
-  saveProfileBtn.disabled    = true;
+function refreshAvatarPreview() {
+  const file = refs.pAvatarFile.files && refs.pAvatarFile.files[0];
+
+  if (file) {
+    if (avatarObjectUrl) URL.revokeObjectURL(avatarObjectUrl);
+
+    avatarObjectUrl = URL.createObjectURL(file);
+    refs.avatarPreview.src = avatarObjectUrl;
+    refs.avatarPreview.hidden = false;
+    return;
+  }
+
+  const url = refs.pAvatar.value.trim();
+
+  if (url) {
+    refs.avatarPreview.src = url;
+    refs.avatarPreview.hidden = false;
+  } else {
+    refs.avatarPreview.removeAttribute("src");
+    refs.avatarPreview.hidden = true;
+  }
+}
+
+async function saveProfile() {
+  refs.profileSuccess.textContent = "";
+  refs.profileSuccess.style.color = "";
+  refs.uploadStatus.textContent = "";
+  refs.uploadStatus.style.color = "";
+
+  const file = refs.pAvatarFile.files && refs.pAvatarFile.files[0];
+  let avatarUrl = refs.pAvatar.value.trim();
+
+  refs.saveProfileBtn.disabled = true;
+  refs.saveProfileBtn.textContent = "جاري الحفظ…";
+
+  if (file) {
+    try {
+      refs.uploadStatus.textContent = "جاري رفع الصورة…";
+      avatarUrl = await uploadAvatar(file);
+
+      refs.uploadStatus.style.color = "var(--success)";
+      refs.uploadStatus.textContent = "✓ تم رفع الصورة بنجاح.";
+    } catch (error) {
+      refs.profileSuccess.style.color = "var(--danger)";
+      refs.profileSuccess.textContent = `خطأ في رفع الصورة: ${error.message}`;
+
+      refs.saveProfileBtn.disabled = false;
+      refs.saveProfileBtn.textContent = "حفظ الملف الشخصي والثيم";
+      return;
+    }
+  }
 
   try {
-    await setDoc(doc(db, "settings", "profile"), {
-      name:      pName.value.trim(),
-      bio:       pBio.value.trim(),
-      avatarUrl: pAvatar.value.trim(),
-      updatedAt: serverTimestamp()
-    });
-    profileSuccess.textContent = "✓ تم حفظ الملف الشخصي.";
-    setTimeout(() => profileSuccess.textContent = "", 3000);
-  } catch (err) {
-    profileSuccess.style.color = "var(--danger)";
-    profileSuccess.textContent = "خطأ في الحفظ: " + err.message;
+    await setDoc(
+      doc(db, "settings", "profile"),
+      {
+        name: refs.pName.value.trim() || "Remlex",
+        bio: refs.pBio.value.trim(),
+        avatarUrl,
+        accentColor: normalizeHex(refs.pAccent.value) || "#3b82f6",
+        bgTop: normalizeHex(refs.pBgTop.value) || "#081120",
+        bgBottom: normalizeHex(refs.pBgBottom.value) || "#02040a",
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    refs.profileSuccess.style.color = "var(--success)";
+    refs.profileSuccess.textContent = "✓ تم حفظ الملف الشخصي والثيم.";
+
+    refs.pAvatarFile.value = "";
+    refreshAvatarPreview();
+
+    setTimeout(() => {
+      refs.profileSuccess.textContent = "";
+      refs.uploadStatus.textContent = "";
+    }, 3000);
+  } catch (error) {
+    refs.profileSuccess.style.color = "var(--danger)";
+    refs.profileSuccess.textContent = `خطأ في الحفظ: ${error.message}`;
   } finally {
-    saveProfileBtn.disabled = false;
+    refs.saveProfileBtn.disabled = false;
+    refs.saveProfileBtn.textContent = "حفظ الملف الشخصي والثيم";
   }
-});
+}
 
-// ══════════════════════════
-//  LINKS — Add
-// ══════════════════════════
-addLinkBtn.addEventListener("click", async () => {
-  linkError.textContent = "";
-  const title = linkTitle.value.trim();
-  const url   = linkUrl.value.trim();
-  const icon  = linkIcon.value.trim() || "🔗";
+async function uploadAvatar(file) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("اختر ملف صورة فقط.");
+  }
 
-  if (!title) { linkError.textContent = "يرجى إدخال العنوان.";   return; }
-  if (!url)   { linkError.textContent = "يرجى إدخال الرابط.";    return; }
-  if (!isValidUrl(url)) { linkError.textContent = "الرابط غير صحيح."; return; }
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error("حجم الصورة يجب أن يكون أقل من 2MB.");
+  }
 
-  addLinkBtn.disabled    = true;
-  addLinkBtn.textContent = "جاري الإضافة…";
+  const safeName = sanitizeFileName(file.name);
+  const fileRef = ref(storage, `avatars/profile-${Date.now()}-${safeName}`);
+
+  await uploadBytes(fileRef, file, {
+    contentType: file.type,
+    cacheControl: "public, max-age=31536000"
+  });
+
+  return getDownloadURL(fileRef);
+}
+
+/* ── Add Link ── */
+
+refs.addLinkBtn.addEventListener("click", addLink);
+
+async function addLink() {
+  refs.linkError.textContent = "";
+
+  const title = refs.linkTitle.value.trim();
+  const url = normalizeUrl(refs.linkUrl.value);
+  const icon = refs.linkIcon.value.trim() || "🔗";
+  const neonColor = normalizeHex(refs.linkNeon.value) || "#3b82f6";
+  const visible = refs.linkVisible.checked;
+
+  if (!title) {
+    refs.linkError.textContent = "يرجى إدخال العنوان.";
+    return;
+  }
+
+  if (!url) {
+    refs.linkError.textContent = "الرابط غير صحيح. استخدم https:// أو http://.";
+    return;
+  }
+
+  refs.addLinkBtn.disabled = true;
+  refs.addLinkBtn.textContent = "جاري الإضافة…";
 
   try {
     await addDoc(collection(db, "links"), {
       title,
       url,
       icon,
-      order:     Date.now(),
-      createdAt: serverTimestamp()
+      neonColor,
+      visible,
+      order: Date.now(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
-    linkTitle.value = "";
-    linkUrl.value   = "";
-    linkIcon.value  = "";
-  } catch (err) {
-    linkError.textContent = "خطأ في الإضافة: " + err.message;
-  } finally {
-    addLinkBtn.disabled    = false;
-    addLinkBtn.textContent = "إضافة الرابط";
-  }
-});
 
-// ══════════════════════════
-//  LINKS — Listen (real-time)
-// ══════════════════════════
+    refs.linkTitle.value = "";
+    refs.linkUrl.value = "";
+    refs.linkIcon.value = "🔗";
+    refs.linkNeon.value = "#3b82f6";
+    refs.linkVisible.checked = true;
+  } catch (error) {
+    refs.linkError.textContent = `خطأ في الإضافة: ${error.message}`;
+  } finally {
+    refs.addLinkBtn.disabled = false;
+    refs.addLinkBtn.textContent = "إضافة الرابط";
+  }
+}
+
+/* ── Listen Links ── */
+
+refs.refreshLinksBtn.addEventListener("click", listenLinks);
+refs.adminList.addEventListener("click", handleAdminListClick);
+
 function listenLinks() {
+  if (unsubscribeLinks) unsubscribeLinks();
+
   const q = query(collection(db, "links"), orderBy("order", "asc"));
 
-  onSnapshot(q, (snap) => {
-    adminList.innerHTML = "";
+  refs.adminList.innerHTML = `<li class="empty-state">جاري التحميل…</li>`;
 
-    if (snap.empty) {
-      adminList.innerHTML = `<li class="empty-state">لا توجد روابط بعد. أضف أول رابط أعلاه.</li>`;
-      return;
+  unsubscribeLinks = onSnapshot(
+    q,
+    (snapshot) => {
+      linkMap.clear();
+
+      snapshot.docs.forEach((docSnap) => {
+        linkMap.set(docSnap.id, {
+          id: docSnap.id,
+          ...docSnap.data()
+        });
+      });
+
+      refs.adminList.replaceChildren();
+
+      if (!linkMap.size) {
+        refs.adminList.innerHTML = `<li class="empty-state">لا توجد روابط بعد. أضف أول رابط أعلاه.</li>`;
+        return;
+      }
+
+      linkMap.forEach((link) => renderAdminLink(link));
+    },
+    (error) => {
+      console.error("خطأ في تحميل الروابط:", error);
+      refs.adminList.innerHTML = `<li class="empty-state">تعذر تحميل الروابط: ${escapeHtml(error.message)}</li>`;
     }
-
-    snap.forEach((docSnap) => {
-      const d  = docSnap.data();
-      const id = docSnap.id;
-      const li = document.createElement("li");
-      li.className = "admin-link-item";
-      li.innerHTML = `
-        <span class="admin-link-icon">${escapeHtml(d.icon || "🔗")}</span>
-        <div class="admin-link-info">
-          <div class="admin-link-title">${escapeHtml(d.title)}</div>
-          <div class="admin-link-url">${escapeHtml(d.url)}</div>
-        </div>
-        <div class="admin-link-actions">
-          <button class="btn btn-edit"   data-id="${id}">تعديل</button>
-          <button class="btn btn-danger" data-id="${id}">حذف</button>
-        </div>`;
-
-      li.querySelector(".btn-edit").addEventListener("click",   () => openEdit(id, d));
-      li.querySelector(".btn-danger").addEventListener("click", () => deleteLink(id, d.title));
-      adminList.appendChild(li);
-    });
-  });
+  );
 }
 
-// ══════════════════════════
-//  LINKS — Delete
-// ══════════════════════════
-async function deleteLink(id, title) {
-  if (!confirm(`حذف الرابط "${title}"؟`)) return;
+function renderAdminLink(link) {
+  const visible = link.visible !== false;
+  const neonColor = normalizeHex(link.neonColor) || "#3b82f6";
+  const title = link.title || "رابط غير معنون";
+  const url = link.url || "";
+  const icon = link.icon || "🔗";
+
+  const li = document.createElement("li");
+  li.className = `admin-link-item${visible ? "" : " is-disabled"}`;
+  li.style.setProperty("--link-neon", neonColor);
+
+  li.innerHTML = `
+    <span class="admin-link-icon">${escapeHtml(icon)}</span>
+
+    <div class="admin-link-info">
+      <div class="admin-link-title">${escapeHtml(title)}</div>
+      <div class="admin-link-url" title="${escapeHtml(url)}">${escapeHtml(url)}</div>
+
+      <div class="admin-link-meta">
+        <span>${visible ? "ظاهر" : "مخفي"}</span>
+        <span>Neon ${escapeHtml(neonColor)}</span>
+      </div>
+    </div>
+
+    <div class="admin-link-actions">
+      <button
+        class="btn btn-toggle"
+        type="button"
+        data-action="toggle"
+        data-id="${escapeHtml(link.id)}"
+      >
+        ${visible ? "تعطيل" : "تفعيل"}
+      </button>
+
+      <button
+        class="btn btn-edit"
+        type="button"
+        data-action="edit"
+        data-id="${escapeHtml(link.id)}"
+      >
+        تعديل
+      </button>
+
+      <button
+        class="btn btn-danger"
+        type="button"
+        data-action="delete"
+        data-id="${escapeHtml(link.id)}"
+      >
+        حذف
+      </button>
+    </div>
+  `;
+
+  refs.adminList.append(li);
+}
+
+async function handleAdminListClick(event) {
+  if (!(event.target instanceof Element)) return;
+
+  const button = event.target.closest("button[data-action]");
+  if (!button || !refs.adminList.contains(button)) return;
+
+  const { action, id } = button.dataset;
+  if (!id) return;
+
+  if (action === "edit") {
+    const link = linkMap.get(id);
+    if (link) openEdit(id, link);
+    return;
+  }
+
+  if (action === "delete") {
+    const link = linkMap.get(id);
+    await deleteLink(id, link);
+    return;
+  }
+
+  if (action === "toggle") {
+    await toggleLink(id);
+  }
+}
+
+async function toggleLink(id) {
+  const link = linkMap.get(id);
+  if (!link) return;
+
+  try {
+    await updateDoc(doc(db, "links", id), {
+      visible: link.visible === false,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    alert(`خطأ في التبديل: ${error.message}`);
+  }
+}
+
+async function deleteLink(id, link) {
+  const title = link?.title || "هذا الرابط";
+
+  if (!confirm(`هل تريد حذف "${title}"؟`)) return;
+
   try {
     await deleteDoc(doc(db, "links", id));
-  } catch (err) {
-    alert("خطأ في الحذف: " + err.message);
+  } catch (error) {
+    alert(`خطأ في الحذف: ${error.message}`);
   }
 }
 
-// ══════════════════════════
-//  LINKS — Edit Modal
-// ══════════════════════════
-function openEdit(id, data) {
-  editId.value    = id;
-  editTitle.value = data.title || "";
-  editUrl.value   = data.url   || "";
-  editIcon.value  = data.icon  || "";
-  modalOverlay.hidden = false;
-}
+/* ── Edit Modal ── */
 
-cancelEditBtn.addEventListener("click", closeModal);
-modalOverlay.addEventListener("click", (e) => {
-  if (e.target === modalOverlay) closeModal();
+refs.saveEditBtn.addEventListener("click", saveEdit);
+refs.cancelEditBtn.addEventListener("click", closeModal);
+
+refs.modalOverlay.addEventListener("click", (event) => {
+  if (event.target === refs.modalOverlay) closeModal();
 });
-function closeModal() {
-  modalOverlay.hidden = true;
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !refs.modalOverlay.hidden) {
+    closeModal();
+  }
+});
+
+function openEdit(id, data) {
+  refs.editId.value = id;
+  refs.editTitle.value = data.title || "";
+  refs.editUrl.value = data.url || "";
+  refs.editIcon.value = data.icon || "🔗";
+  refs.editNeon.value = normalizeHex(data.neonColor) || "#3b82f6";
+  refs.editVisible.checked = data.visible !== false;
+  refs.editError.textContent = "";
+
+  refs.modalOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+
+  setTimeout(() => refs.editTitle.focus(), 50);
 }
 
-saveEditBtn.addEventListener("click", async () => {
-  const id    = editId.value;
-  const title = editTitle.value.trim();
-  const url   = editUrl.value.trim();
-  const icon  = editIcon.value.trim() || "🔗";
+function closeModal() {
+  refs.modalOverlay.hidden = true;
+  document.body.style.overflow = "";
+}
 
-  if (!title || !url) { alert("يرجى ملء العنوان والرابط."); return; }
-  if (!isValidUrl(url)) { alert("الرابط غير صحيح."); return; }
+async function saveEdit() {
+  refs.editError.textContent = "";
 
-  saveEditBtn.disabled    = true;
-  saveEditBtn.textContent = "جاري الحفظ…";
+  const id = refs.editId.value;
+  const title = refs.editTitle.value.trim();
+  const url = normalizeUrl(refs.editUrl.value);
+  const icon = refs.editIcon.value.trim() || "🔗";
+  const neonColor = normalizeHex(refs.editNeon.value) || "#3b82f6";
+  const visible = refs.editVisible.checked;
+
+  if (!id) return;
+
+  if (!title) {
+    refs.editError.textContent = "يرجى إدخال العنوان.";
+    return;
+  }
+
+  if (!url) {
+    refs.editError.textContent = "الرابط غير صحيح. استخدم https:// أو http://.";
+    return;
+  }
+
+  refs.saveEditBtn.disabled = true;
+  refs.saveEditBtn.textContent = "جاري الحفظ…";
 
   try {
-    await updateDoc(doc(db, "links", id), { title, url, icon });
-    closeModal();
-  } catch (err) {
-    alert("خطأ في التعديل: " + err.message);
-  } finally {
-    saveEditBtn.disabled    = false;
-    saveEditBtn.textContent = "حفظ";
-  }
-});
+    await updateDoc(doc(db, "links", id), {
+      title,
+      url,
+      icon,
+      neonColor,
+      visible,
+      updatedAt: serverTimestamp()
+    });
 
-// ── Helpers ──
-function isValidUrl(str) {
-  try { new URL(str); return true; } catch { return false; }
+    closeModal();
+  } catch (error) {
+    refs.editError.textContent = `خطأ في التعديل: ${error.message}`;
+  } finally {
+    refs.saveEditBtn.disabled = false;
+    refs.saveEditBtn.textContent = "حفظ";
+  }
 }
 
-function escapeHtml(str = "") {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+/* ── Helpers ── */
+
+function normalizeHex(value) {
+  const str = String(value || "").trim();
+
+  if (/^#[0-9a-f]{6}$/i.test(str)) {
+    return str.toLowerCase();
+  }
+
+  const short = str.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (short) {
+    return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`.toLowerCase();
+  }
+
+  return "";
+}
+
+function normalizeUrl(value) {
+  const raw = String(value || "").trim();
+
+  try {
+    const url = new URL(raw);
+    const allowedProtocols = ["http:", "https:", "mailto:", "tel:"];
+
+    return allowedProtocols.includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function escapeHtml(value = "") {
+  const map = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  };
+
+  return String(value ?? "").replace(/[&<>"']/g, (char) => map[char]);
+}
+
+function sanitizeFileName(name) {
+  const safe = String(name || "avatar.png")
+    .trim()
+    .replace(/[^\w.-]+/g, "_")
+    .slice(0, 80);
+
+  return safe || "avatar.png";
 }
