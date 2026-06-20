@@ -4,10 +4,11 @@
 // ════════════════════════════════════════
 
 export const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyCJXrm135_v9IyUcP6uiuUZdxXfgmNS1YU",
+  authDomain: "myweb220.firebaseapp.com",
+  projectId: "myweb220",
+  storageBucket: "myweb220.firebasestorage.app",
+  messagingSenderId: "1079436891886",
+  appId: "1:1079436891886:web:1983c06c383edb3e9845ff",
+  measurementId: "G-H90T33R1H2"
 };
