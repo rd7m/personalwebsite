@@ -3,21 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#081120" />
   <title>لوحة التحكم — Remlex</title>
-  <link rel="stylesheet" href="style.css" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body class="admin-page">
+  <div class="bg-glow glow-1" aria-hidden="true"></div>
+  <div class="bg-glow glow-2" aria-hidden="true"></div>
 
-  <div class="bg-glow glow-1"></div>
-  <div class="bg-glow glow-2"></div>
-
-  <!-- ── شاشة تسجيل الدخول ── -->
+  <!-- Auth -->
   <div class="auth-screen" id="auth-screen">
-    <div class="glass-card auth-card">
-      <h2 class="auth-title">تسجيل الدخول</h2>
-      <p class="auth-sub">للوصول إلى لوحة التحكم</p>
+    <section class="glass-card auth-card" aria-labelledby="auth-title">
+      <div class="auth-brand">
+        <span class="brand-mark">R</span>
+        <div>
+          <strong>Remlex</strong>
+          <small>Admin Console</small>
+        </div>
+      </div>
+
+      <h1 id="auth-title" class="auth-title">تسجيل الدخول</h1>
+      <p class="auth-sub">استخدم حساب Firebase Auth المسموح فقط.</p>
 
       <div class="field-group">
         <label for="email">البريد الإلكتروني</label>
@@ -31,94 +46,189 @@
 
       <p class="error-msg" id="auth-error" aria-live="polite"></p>
 
-      <button class="btn btn-primary" id="login-btn">دخول</button>
-    </div>
+      <button class="btn btn-primary full-width" id="login-btn" type="button">دخول</button>
+    </section>
   </div>
 
-  <!-- ── لوحة التحكم ── -->
-  <div class="dashboard" id="dashboard" hidden>
-
+  <!-- Dashboard -->
+  <main class="dashboard" id="dashboard" hidden>
     <header class="dash-header">
-      <div>
+      <div class="dash-title">
         <span class="dash-logo">Remlex</span>
-        <span class="dash-label">لوحة التحكم</span>
+        <span class="dash-label">Advanced Admin Panel</span>
       </div>
-      <button class="btn btn-ghost" id="logout-btn">خروج</button>
+
+      <button class="btn btn-ghost" id="logout-btn" type="button">خروج</button>
     </header>
 
     <div class="dash-body">
+      <!-- Profile -->
+      <section class="glass-card section-card" aria-labelledby="profile-section-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="profile-section-title">الملف الشخصي والثيم</h2>
+            <p>تحكم بالاسم، النبذة، الصورة، وألوان الصفحة العامة.</p>
+          </div>
+        </div>
 
-      <!-- ── بيانات الملف الشخصي ── -->
-      <section class="glass-card section-card">
-        <h3 class="section-title">الملف الشخصي</h3>
-        <div class="field-group">
-          <label for="p-name">الاسم</label>
-          <input type="text" id="p-name" placeholder="Remlex" />
+        <div class="avatar-editor">
+          <img id="avatar-preview" class="avatar-preview" alt="معاينة الصورة" hidden />
+
+          <div class="field-group">
+            <label for="p-avatar-file">رفع صورة جديدة من Storage</label>
+            <input type="file" id="p-avatar-file" accept="image/*" />
+          </div>
         </div>
-        <div class="field-group">
-          <label for="p-bio">Bio</label>
-          <textarea id="p-bio" rows="3" placeholder="نبذة قصيرة عنك…"></textarea>
+
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="p-name">الاسم الظاهر</label>
+            <input type="text" id="p-name" placeholder="Remlex" />
+          </div>
+
+          <div class="field-group">
+            <label for="p-bio">Bio</label>
+            <textarea id="p-bio" rows="3" placeholder="نبذة قصيرة عنك…"></textarea>
+          </div>
+
+          <div class="field-group">
+            <label for="p-accent">لون الهوية العام</label>
+            <input type="color" id="p-accent" value="#3b82f6" />
+          </div>
+
+          <div class="field-group">
+            <label for="p-bg-top">لون الخلفية العلوي</label>
+            <input type="color" id="p-bg-top" value="#081120" />
+          </div>
+
+          <div class="field-group full">
+            <label for="p-bg-bottom">لون الخلفية السفلي</label>
+            <input type="color" id="p-bg-bottom" value="#02040a" />
+          </div>
+
+          <div class="field-group full">
+            <label for="p-avatar">رابط صورة خارجي اختياري</label>
+            <input type="url" id="p-avatar" placeholder="https://…" />
+          </div>
         </div>
-        <div class="field-group">
-          <label for="p-avatar">رابط الصورة الشخصية (اختياري)</label>
-          <input type="url" id="p-avatar" placeholder="https://…" />
-        </div>
-        <button class="btn btn-primary" id="save-profile-btn">حفظ الملف الشخصي</button>
+
+        <button class="btn btn-primary" id="save-profile-btn" type="button">
+          حفظ الملف الشخصي والثيم
+        </button>
+
         <p class="success-msg" id="profile-success" aria-live="polite"></p>
+        <p class="error-msg" id="upload-status" aria-live="polite"></p>
       </section>
 
-      <!-- ── إضافة رابط جديد ── -->
-      <section class="glass-card section-card">
-        <h3 class="section-title">إضافة رابط جديد</h3>
-        <div class="field-group">
-          <label for="link-title">العنوان</label>
-          <input type="text" id="link-title" placeholder="مثال: قناتي على يوتيوب" />
+      <!-- Add Link -->
+      <section class="glass-card section-card" aria-labelledby="add-link-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="add-link-title">إضافة رابط جديد</h2>
+            <p>كل رابط يمكن أن يملك لون نيون خاص به وحالة ظهور مستقلة.</p>
+          </div>
         </div>
-        <div class="field-group">
-          <label for="link-url">الرابط</label>
-          <input type="url" id="link-url" placeholder="https://…" />
+
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="link-title">العنوان</label>
+            <input type="text" id="link-title" placeholder="مثال: قناتي على يوتيوب" />
+          </div>
+
+          <div class="field-group">
+            <label for="link-url">الرابط</label>
+            <input type="url" id="link-url" placeholder="https://…" />
+          </div>
+
+          <div class="field-group">
+            <label for="link-icon">الأيقونة</label>
+            <input type="text" id="link-icon" maxlength="4" value="🔗" />
+          </div>
+
+          <div class="field-group">
+            <label for="link-neon">لون النيون</label>
+            <input type="color" id="link-neon" value="#3b82f6" />
+          </div>
+
+          <label class="checkbox-field full" for="link-visible">
+            <span>إظهار الرابط في الصفحة العامة</span>
+            <input type="checkbox" id="link-visible" checked />
+          </label>
         </div>
-        <div class="field-group">
-          <label for="link-icon">أيقونة (emoji أو نص)</label>
-          <input type="text" id="link-icon" placeholder="🔗" maxlength="4" />
-        </div>
-        <button class="btn btn-primary" id="add-link-btn">إضافة الرابط</button>
+
+        <button class="btn btn-primary" id="add-link-btn" type="button">إضافة الرابط</button>
         <p class="error-msg" id="link-error" aria-live="polite"></p>
       </section>
 
-      <!-- ── الروابط الحالية ── -->
-      <section class="glass-card section-card">
-        <h3 class="section-title">الروابط الحالية</h3>
-        <ul class="admin-links-list" id="admin-links-list">
-          <li class="empty-state">جاري التحميل…</li>
-        </ul>
-      </section>
+      <!-- Links List -->
+      <section class="glass-card section-card" aria-labelledby="links-section-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="links-section-title">الروابط الحالية</h2>
+            <p>تعديل، حذف، تفعيل، تعطيل، وتغيير ألوان الروابط.</p>
+          </div>
 
+          <button class="btn btn-ghost" id="refresh-links-btn" type="button">تحديث</button>
+        </div>
+
+        <ul class="admin-links-list" id="admin-links-list" aria-live="polite"></ul>
+      </section>
     </div>
-  </div>
+  </main>
 
   <!-- Edit Modal -->
-  <div class="modal-overlay" id="modal-overlay" hidden>
-    <div class="glass-card modal-card">
-      <h3 class="section-title">تعديل الرابط</h3>
+  <div
+    class="modal-overlay"
+    id="modal-overlay"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="edit-title-label"
+  >
+    <section class="glass-card modal-card">
+      <div class="section-heading">
+        <div>
+          <h2 id="edit-title-label">تعديل الرابط</h2>
+          <p>حدّث بيانات الرابط ولون النيون وحالة الظهور.</p>
+        </div>
+      </div>
+
       <input type="hidden" id="edit-id" />
-      <div class="field-group">
-        <label for="edit-title">العنوان</label>
-        <input type="text" id="edit-title" />
+
+      <div class="form-grid">
+        <div class="field-group">
+          <label for="edit-title">العنوان</label>
+          <input type="text" id="edit-title" />
+        </div>
+
+        <div class="field-group">
+          <label for="edit-url">الرابط</label>
+          <input type="url" id="edit-url" />
+        </div>
+
+        <div class="field-group">
+          <label for="edit-icon">الأيقونة</label>
+          <input type="text" id="edit-icon" maxlength="4" />
+        </div>
+
+        <div class="field-group">
+          <label for="edit-neon">لون النيون</label>
+          <input type="color" id="edit-neon" value="#3b82f6" />
+        </div>
+
+        <label class="checkbox-field full" for="edit-visible">
+          <span>الرابط ظاهر في الصفحة العامة</span>
+          <input type="checkbox" id="edit-visible" />
+        </label>
       </div>
-      <div class="field-group">
-        <label for="edit-url">الرابط</label>
-        <input type="url" id="edit-url" />
-      </div>
-      <div class="field-group">
-        <label for="edit-icon">الأيقونة</label>
-        <input type="text" id="edit-icon" maxlength="4" />
-      </div>
+
+      <p class="error-msg" id="edit-error" aria-live="polite"></p>
+
       <div class="modal-actions">
-        <button class="btn btn-primary" id="save-edit-btn">حفظ</button>
-        <button class="btn btn-ghost" id="cancel-edit-btn">إلغاء</button>
+        <button class="btn btn-primary" id="save-edit-btn" type="button">حفظ</button>
+        <button class="btn btn-ghost" id="cancel-edit-btn" type="button">إلغاء</button>
       </div>
-    </div>
+    </section>
   </div>
 
   <script type="module" src="admin.js"></script>
