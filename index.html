@@ -3,43 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Remlex — PC Performance & Gaming Optimization links" />
+  <meta name="theme-color" content="#081120" />
   <title>Remlex — Link in Bio</title>
-  <link rel="stylesheet" href="style.css" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
 </head>
+
 <body class="public-page">
+  <div class="bg-glow glow-1" aria-hidden="true"></div>
+  <div class="bg-glow glow-2" aria-hidden="true"></div>
 
-  <div class="bg-glow glow-1"></div>
-  <div class="bg-glow glow-2"></div>
+  <div class="public-shell">
+    <main class="glass-card profile-card" id="profile-container" aria-label="صفحة Remlex الشخصية">
+      <header class="profile-header">
+        <div class="avatar-wrap skeleton" id="avatar-wrap">
+          <img id="avatar-img" alt="صورة Remlex" decoding="async" style="display:none" />
+          <span id="avatar-initials">R</span>
+        </div>
 
-  <main class="profile-container" id="profile-container">
+        <div class="profile-copy">
+          <p class="eyebrow">PC Performance • Gaming Optimization</p>
+          <h1 class="profile-name skeleton-text" id="profile-name">Remlex</h1>
+          <p class="profile-bio skeleton-text" id="profile-bio"></p>
+        </div>
+      </header>
 
-    <!-- Header Skeleton -->
-    <div class="profile-header">
-      <div class="avatar-wrap skeleton" id="avatar-wrap">
-        <img id="avatar-img" src="" alt="avatar" style="display:none" />
-        <span id="avatar-initials"></span>
-      </div>
-      <h1 class="profile-name skeleton-text" id="profile-name"></h1>
-      <p class="profile-bio skeleton-text" id="profile-bio"></p>
-    </div>
+      <nav class="links-nav" aria-label="روابط Remlex">
+        <ul class="links-list" id="links-list" aria-live="polite"></ul>
+      </nav>
+    </main>
 
-    <!-- Links List -->
-    <ul class="links-list" id="links-list" aria-label="الروابط">
-      <!-- populated by JS -->
-    </ul>
+    <footer class="public-footer">
+      <span>© <span id="current-year"></span> Remlex</span>
+      <span>High FPS. Low Latency.</span>
+    </footer>
+  </div>
 
-  </main>
-
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    window.__firebaseApp = initializeApp;
-    window.__getFirestore = getFirestore;
-  </script>
   <script type="module" src="app.js"></script>
-
 </body>
 </html>
